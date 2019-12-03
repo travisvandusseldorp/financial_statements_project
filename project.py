@@ -131,7 +131,7 @@ for i in range(1,9):
 # In[ ]:
 
 
-mv = aapl.pivot_table(index=['adsh', 'stmt', 'fp', 'report', 'form', 'qtrs', 'version', 'fye', 'line', 'plabel'], columns=['ddate'], values = 'value')
+mv = aapl.pivot_table(index=['adsh', 'stmt', 'fp', 'report', 'form', 'qtrs', 'version', 'fye', 'line', 'plabel', 'tag'], columns=['ddate'], values = 'value')
 all_bs = mv
 all_bs
 
@@ -150,6 +150,7 @@ w = {}
 
 bs_list = []
 is_list = []
+mq = list(z.index.get_level_values(0).unique())
 
 for i in range(0,num_filings):
     first_adsh = adsh_group.get_group(adsh_nums[i])
@@ -162,28 +163,41 @@ for i in range(0,num_filings):
             drops.append(i.name)
     
     d = c.reset_index(drops, drop=True)
-    
+    e = d.reset_index('report', drop=True)
     
     argh = []
-    e = d.reset_index('version')
-    versions = e['version'].unique()
-    f = e.reset_index('qtrs')
-    g = f.drop(['version'], axis = 1)
+    #e = d.reset_index('version')
+    #e=d
+    #versions = e['version'].unique()
     
-    h = g.reset_index('report', drop=True)
+    
+    #f = e.reset_index('qtrs')
+    
+    #g = f.drop(['version'], axis = 1)
+    
+    #h = f.reset_index('report', drop=True)
+    k = d.reset_index('report', drop=True)
     i = h
-    j = i[i['qtrs'] != 4]
-    k = j.drop('qtrs', axis=1)
+    #j = i[i['qtrs'] != 4]
+    #k = j.drop('qtrs', axis=1)
+    k = h
     #k = j.unstack(1)
-    y = k.dropna(axis=1, thresh=2)
-    z = y.reset_index('line', drop=True)
-    display(z)
+    
 
+    y = k.dropna(axis=1, thresh=2)
+    z = y.copy()
+    #z = y.reset_index('line', drop=True)
+    #display(z)
+    
+    
     for i in mq:
         try:
-            u = z.loc[i].dropna(axis=1)
+            u = e.loc[i].dropna(axis=1)
+###################### CHANGE BACK TO BS !!!!!!
             if i == 'BS':
                 bs_list.append(u)
+            elif i == 'IS':
+                is_list.append(u)
             else:
                 is_list.append(u)
         except Exception:
@@ -193,8 +207,70 @@ for i in range(0,num_filings):
 # In[ ]:
 
 
-for i in bs_list:
-    display(i)
+
+
+
+# In[ ]:
+
+
+########## BEGIN BALANCE SHEET #############
+
+
+# In[ ]:
+
+
+bs_list2 = [i.reset_index('line', drop=True).unstack(0) for i in bs_list]
+bs_list3 = [i.reset_index(['form', 'plabel'], drop=True) for i in bs_list2]
+balance_sheet_df = pd.concat(bs_list3, axis=1, sort=False)
+#reduce(lambda x, y: pd.merge(x, y, on=['tag'], how='outer'), bs_list2)
+
+
+# In[ ]:
+
+
+balance_sheet_df.loc[(0,'us-gaap/2018'):(4,'us-gaap/2018')]
+balance_sheet_df
+
+
+# In[ ]:
+
+
+versions_df_list = []
+versions = sorted(balance_sheet_df.index.get_level_values(1).unique(), reverse=True)
+for i in versions:
+    print(i)
+    versions_df_list.append(balance_sheet_df.loc[0,i])
+
+
+# In[ ]:
+
+
+comb_bs_df = versions_df_list[0].combine_first(versions_df_list[1])
+
+
+# In[ ]:
+
+
+versions_df_list[0]
+
+
+# In[ ]:
+
+
+comb_bs_df.rename(columns={'FY':'Q4-FY'}, inplace=True)
+comb_bs_df.reindex(sorted(comb_bs_df.columns), axis=1)
+
+
+# In[ ]:
+
+
+comb_bs_df
+
+
+# In[ ]:
+
+
+########## END BALANCE SHEET #############
 
 
 # In[ ]:
@@ -212,67 +288,59 @@ for i in bs_list:
 # In[ ]:
 
 
-
-
-
-# In[ ]:
-
-
-
+###########################################################################
+###############   MERGE EXAMPLE    ########################################
 
 
 # In[ ]:
 
 
+arrays = [['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux'],
+            ['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two']]
+tuples = list(zip(*arrays))
+index1 = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
+index2 = pd.MultiIndex.from_tuples(tuples, names=['third', 'fourth'])
 
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
+s1 = pd.DataFrame(np.random.randn(8), index=index1, columns=['s1'])
+s2 = pd.DataFrame(np.random.randn(8), index=index2, columns=['s2'])
 
 
 # In[ ]:
 
 
-
-
-
-# In[ ]:
-
-
-
+s1
 
 
 # In[ ]:
 
 
-
-
-
-# In[ ]:
-
-
-
+s2
 
 
 # In[ ]:
 
 
-
+s1.merge(s2, left_index=True, right_on=['third', 'fourth'])
 
 
 # In[ ]:
 
 
+pd.concat([s1, s2], axis=1)
 
+
+# In[ ]:
+
+
+pd.concat(bs_list3, axis=1, sort=False)
+
+
+# In[ ]:
+
+
+df1 = pd.DataFrame({'A': [None, 0], 'B': [None, 4]})
+df2 = pd.DataFrame({'A': [1, 1], 'B': [3, 3]})
+df1.combine_first(df2)
 
 
 # In[ ]:
