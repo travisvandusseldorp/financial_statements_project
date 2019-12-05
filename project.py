@@ -4,14 +4,15 @@
 # In[ ]:
 
 
-# Import libraries, set options to display all columns in dataframes
+# Load libraries, set options to display all columns in dataframes
+
 import pandas as pd
 import numpy as np
-import re
-import requests
-from bigfloat import *
-from lxml import html
 from functools import partial, reduce 
+#import re
+#import requests
+#from bigfloat import *
+#from lxml import html
 
 idx = pd.IndexSlice
 pd.set_option('display.max_columns', None)  
@@ -21,33 +22,35 @@ pd.__version__
 # In[ ]:
 
 
+##### Data loading and preparing
+###
 # Load financial data
-subs = pd.read_csv("data/2019q1//sub.txt", sep='\t')# parsedates=['accepted'])) 
+sub = pd.read_csv("data/2019q1//sub.txt", sep='\t')# parsedates=['accepted'])) 
 pre = pd.read_csv("data/2019q1/pre.txt", sep='\t') 
 num = pd.read_csv("data/2019q1/num.txt", sep='\t')#, parsedates=['ddate']) 
 tag = pd.read_csv("data/2019q1/tag.txt", sep='\t') 
 
-subs = subs.append(pd.read_csv("data/2019q2/sub.txt", sep='\t'))
+sub = sub.append(pd.read_csv("data/2019q2/sub.txt", sep='\t'))
 pre = pre.append(pd.read_csv("data/2019q2/pre.txt", sep='\t'))
 num = num.append(pd.read_csv("data/2019q2/num.txt", sep='\t'))#, parsedates=['ddate']))
 
-subs = subs.append(pd.read_csv("data/2019q3/sub.txt", sep='\t'))
+sub = sub.append(pd.read_csv("data/2019q3/sub.txt", sep='\t'))
 pre = pre.append(pd.read_csv("data/2019q3/pre.txt", sep='\t'))
 num = num.append(pd.read_csv("data/2019q3/num.txt", sep='\t'))
 
-subs = subs.append(pd.read_csv("data/2018q1/sub.txt", sep='\t'))
+sub = sub.append(pd.read_csv("data/2018q1/sub.txt", sep='\t'))
 pre = pre.append(pd.read_csv("data/2018q1/pre.txt", sep='\t'))
 num = num.append(pd.read_csv("data/2018q1/num.txt", sep='\t'))#, parsedates=['ddate']))
 
-subs = subs.append(pd.read_csv("data/2018q2/sub.txt", sep='\t'))
+sub = sub.append(pd.read_csv("data/2018q2/sub.txt", sep='\t'))
 pre = pre.append(pd.read_csv("data/2018q2/pre.txt", sep='\t'))
 num = num.append(pd.read_csv("data/2018q2/num.txt", sep='\t'))#, parsedates=['ddate']))
 
-subs = subs.append(pd.read_csv("data/2018q3/sub.txt", sep='\t'))
+sub = sub.append(pd.read_csv("data/2018q3/sub.txt", sep='\t'))
 pre = pre.append(pd.read_csv("data/2018q3/pre.txt", sep='\t'))
 num = num.append(pd.read_csv("data/2018q3/num.txt", sep='\t'))#, parsedates=['ddate']))
 
-subs = subs.append(pd.read_csv("data/2018q4/sub.txt", sep='\t'))
+sub = sub.append(pd.read_csv("data/2018q4/sub.txt", sep='\t'))
 pre = pre.append(pd.read_csv("data/2018q4/pre.txt", sep='\t'))
 num = num.append(pd.read_csv("data/2018q4/num.txt", sep='\t'))#, parsedates=['ddate']))
 
@@ -58,542 +61,237 @@ num = num.append(pd.read_csv("data/2018q4/num.txt", sep='\t'))#, parsedates=['dd
 # Load and clean ticker and ciks
 ciks = pd.read_csv('data/ticker_cik.csv')
 ciks.dropna(inplace=True)
-ciks['cik'] = ciks['cik'].astype('int64')
 
 
 # In[ ]:
 
 
-new_sub = pd.merge(left=ciks, right=subs, left_on='cik', right_on='cik')
-new_sub = new_sub[['ticker', 'adsh', 'name', 'form', 'period', 'fp', 'fy', 'fye']]
+# Merge ciks with subs, select necessary columns from submission dataframes
+new_sub = pd.merge(left=ciks, right=sub, left_on='cik', right_on='cik')
+new_sub = new_sub[['ticker', 'adsh', 'name', 'form', 'period', 'fp', 'fy', 'filed']]
+new_num = num[['adsh', 'tag', 'version', 'ddate', 'qtrs', 'value', 'footnote']]
+new_pre = pre[['adsh', 'line', 'stmt', 'tag', 'plabel', 'negating']]
 
 
 # In[ ]:
 
 
-new_pre = pre[['adsh', 'report', 'line', 'stmt', 'tag', 'plabel', 'negating', 'inpth']]
-
-
-# In[ ]:
-
-
-sub_pre = pd.merge(left=new_sub, right=new_pre, on='adsh')
-
-
-# In[ ]:
-
-
-new_num = num[['adsh', 'tag', 'version', 'ddate', 'qtrs', 'uom', 'value', 'footnote']]
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-new_sub = pd.merge(left=ciks, right=subs, left_on='cik', right_on='cik')
+# Merge new submission dataframes into on dataframe -- merged_items
 sub_pre = pd.merge(left=new_sub, right=new_pre, on='adsh' )
-
-
-# In[ ]:
-
-
 merged_items = pd.merge(left=sub_pre, right=new_num, on=['adsh', 'tag'])
 
 
 # In[ ]:
 
 
-merged_items.head()
+merged_items.head(2)
 
 
 # In[ ]:
 
 
-aapl = merged_items[merged_items['ticker']=='aapl']
+####################################################################################################
+# End of loading and preparing
 
 
 # In[ ]:
 
 
-print(aapl['report'].unique())
-print(aapl['stmt'].unique())
-for i in range(1,9):
-    print(i)
-    q = aapl[aapl['report']==i]
-    display(q)
+
 
 
 # In[ ]:
 
 
-mv = aapl.pivot_table(index=['adsh', 'stmt', 'fp', 'report', 'form', 'qtrs', 'version', 'fye', 'line', 'plabel', 'tag'], columns=['ddate'], values = 'value')
-all_bs = mv
-all_bs
+### Functions
 
 
 # In[ ]:
 
 
-adsh_nums = list(all_bs.index.levels[0])
-all_bs2 = all_bs.reset_index(['adsh'])
+# Select company submissions using ticker
+def find_company_submissions(ticker):
+    comp_sub = merged_items[merged_items['ticker']== ticker]
+    return(comp_sub)
 
 
-adsh_group = all_bs2.groupby('adsh')
-num_filings = len(all_bs2['adsh'].unique())
+# In[ ]:
 
-w = {}
 
-bs_list = []
-is_list = []
-mq = list(z.index.get_level_values(0).unique())
+# Filter dataframe based on statement
+def filter_statement(comp_df, stmt):
+    comp_statement = comp_df[comp_df['stmt'] == stmt]
+    return(comp_statement)
 
-for i in range(0,num_filings):
-    first_adsh = adsh_group.get_group(adsh_nums[i])
-    c = first_adsh.drop('adsh', axis = 1)
-    
-    drops = []
-    levs = list(c.index.levels)
-    for i in levs:
-        if len(i) <= 1:
-            drops.append(i.name)
-    
-    d = c.reset_index(drops, drop=True)
-    e = d.reset_index('report', drop=True)
-    
-    argh = []
-    #e = d.reset_index('version')
-    #e=d
-    #versions = e['version'].unique()
-    
-    
-    #f = e.reset_index('qtrs')
-    
-    #g = f.drop(['version'], axis = 1)
-    
-    #h = f.reset_index('report', drop=True)
-    k = d.reset_index('report', drop=True)
-    i = h
-    #j = i[i['qtrs'] != 4]
-    #k = j.drop('qtrs', axis=1)
-    k = h
-    #k = j.unstack(1)
-    
 
-    y = k.dropna(axis=1, thresh=2)
-    z = y.copy()
-    #z = y.reset_index('line', drop=True)
-    #display(z)
+# In[ ]:
+
+
+def split_stmt_subs(comp_stmt):
+    adsh_nums = comp_stmt['adsh'].unique()
+    sngl_sub_list = []
     
-    
-    for i in mq:
-        try:
-            u = e.loc[i].dropna(axis=1)
-###################### CHANGE BACK TO BS !!!!!!
-            if i == 'BS':
-                bs_list.append(u)
-            elif i == 'IS':
-                is_list.append(u)
-            else:
-                is_list.append(u)
-        except Exception:
+    for num in adsh_nums:
+        sngl_sub = comp_stmt[comp_stmt['adsh'] == num]
+        sngl_sub_list.append(sngl_sub)
+    return(sngl_sub_list)
+
+
+# In[ ]:
+
+
+# Create pivot table from the company statement
+#def make_pivot_table(stmt_df):
+#    pv_table = stmt_df.pivot_table(index=['adsh', 'stmt', 'fp', 'form', 'qtrs', 'version', 'filed', 'line','negating',
+#                                          'plabel', 'tag'], columns=['ddate'], values = 'value')
+#    return(pv_table)
+
+
+# In[ ]:
+
+
+# Get filings that have values reflection only 1 quarter
+def get_quarterly_values(cln_list):
+    quarterly_results = []
+    for stmt in cln_list:
+        quarterly_statement = stmt.xs(1)
+        quarterly_results.append(quarterly_statement)
+    return(quarterly_results)
+
+
+# In[ ]:
+
+
+##### Clean pivot table for combining
+# Create pivot table from the company statement
+def make_pivot_table(stmt_df):
+    pv_table = stmt_df.pivot_table(index=['adsh', 'stmt', 'qtrs', 'ddate', 'form', 'version', 'filed', 'line','negating',
+                                          'plabel', 'tag'], columns=['fp'], values = 'value')
+    return(pv_table)
+
+
+# In[ ]:
+
+
+def make_list_of_pivot_tables(comp_list):
+    pivoted_stmt_list = []
+    for sub in comp_list:
+        pv_stmt = make_pivot_table(sub)
+        pivoted_stmt_list.append(pv_stmt)
+    pivoted_stmt_list[1]
+    pivoted_stmt_list[0].append(pivoted_stmt_list[1])
+    return(pivoted_stmt_list)
+
+
+# In[ ]:
+
+
+##### Clean pivot table for combining
+### REVIST HOW TO HANDLE NEGATING
+def clean_pivot_table(pvt_tb):
+    clean_pv_tb = pvt_tb.reset_index(['adsh', 'stmt', 'negating'], drop=True)
+    return(clean_pv_tb)
+
+
+# In[ ]:
+
+
+# Get filings that have values reflection only 1 quarter
+def get_quarterly_values(cln_list):
+    quarterly_results = []
+    for stmt in cln_list:
+        quarterly_statement = stmt.xs(1)
+        if quarterly_statement.index.get_level_values('form')[0] == '10-Q':
+            quarterly_results.append(quarterly_statement)
+        else:
             pass
+    return(quarterly_results)
 
 
 # In[ ]:
 
 
-
-
-
-# In[ ]:
-
-
-########## BEGIN BALANCE SHEET #############
+def combine_tables(tb_list):
+    comb_tb = reduce(lambda x, y: x.append(y, sort=False), tb_list[:5])
+    return(comb_tb)
 
 
 # In[ ]:
 
 
-bs_list2 = [i.reset_index('line', drop=True).unstack(0) for i in bs_list]
-bs_list3 = [i.reset_index(['form', 'plabel'], drop=True) for i in bs_list2]
-balance_sheet_df = pd.concat(bs_list3, axis=1, sort=False)
-#reduce(lambda x, y: pd.merge(x, y, on=['tag'], how='outer'), bs_list2)
+### MAY BE BETTER TO USE SUBMISSION DATE????
+def seperate_by_dd_date(df):
+    filings_by_ddate = []
+    for i in df.index.get_level_values('filed').unique().to_list():
+        filings_by_ddate.append(df.xs(i, level='filed'))
+    return(filings_by_ddate)
 
 
 # In[ ]:
 
 
-balance_sheet_df.loc[(0,'us-gaap/2018'):(4,'us-gaap/2018')]
-balance_sheet_df
+def clean_dfs(seperated_df):
+    cleaned_list = []
+    for i in seperated_df:
+        tmp = i.dropna(axis=1).reset_index(['ddate'])
+        tmp2 = tmp.pivot(columns='ddate')
+        tmp3 = tmp2.reset_index(['form', 'line', 'plabel'], drop=True)
+        cleaned_list.append(tmp3)
+    return(cleaned_list)
 
 
 # In[ ]:
 
 
-versions_df_list = []
-versions = sorted(balance_sheet_df.index.get_level_values(1).unique(), reverse=True)
-for i in versions:
-    print(i)
-    versions_df_list.append(balance_sheet_df.loc[0,i])
+tickers = ['tsla', 'bke', 'wmt', 'f', 'bbby', 'mck']
+results = []
 
+for ticker in tickers:
+    aapl = find_company_submissions(ticker)
 
-# In[ ]:
+    aapl_is = filter_statement(aapl, 'IS')    
+    aapl_subs_list = split_stmt_subs(aapl_is)  
+    pv_tb = []
+    for i in aapl_subs_list:
+        tmp = make_pivot_table(i)
+        pv_tb.append(clean_pivot_table(tmp))
 
+    quarterly_results = get_quarterly_values(pv_tb)
 
-comb_bs_df = versions_df_list[0].combine_first(versions_df_list[1])
-
-
-# In[ ]:
-
-
-versions_df_list[0]
-
-
-# In[ ]:
-
-
-comb_bs_df.rename(columns={'FY':'Q4-FY'}, inplace=True)
-comb_bs_df.reindex(sorted(comb_bs_df.columns), axis=1)
-
-
-# In[ ]:
-
-
-comb_bs_df
-
-
-# In[ ]:
-
-
-########## END BALANCE SHEET #############
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-###########################################################################
-###############   MERGE EXAMPLE    ########################################
-
-
-# In[ ]:
-
-
-arrays = [['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux'],
-            ['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two']]
-tuples = list(zip(*arrays))
-index1 = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
-index2 = pd.MultiIndex.from_tuples(tuples, names=['third', 'fourth'])
-
-s1 = pd.DataFrame(np.random.randn(8), index=index1, columns=['s1'])
-s2 = pd.DataFrame(np.random.randn(8), index=index2, columns=['s2'])
-
-
-# In[ ]:
-
-
-s1
-
-
-# In[ ]:
-
-
-s2
-
-
-# In[ ]:
-
-
-s1.merge(s2, left_index=True, right_on=['third', 'fourth'])
-
-
-# In[ ]:
-
-
-pd.concat([s1, s2], axis=1)
-
-
-# In[ ]:
-
-
-pd.concat(bs_list3, axis=1, sort=False)
-
-
-# In[ ]:
-
-
-df1 = pd.DataFrame({'A': [None, 0], 'B': [None, 4]})
-df2 = pd.DataFrame({'A': [1, 1], 'B': [3, 3]})
-df1.combine_first(df2)
-
-
-# In[ ]:
-
-
-################################################################################################################
-
-
-# In[ ]:
-
-
-y.loc['BS']
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-tester.droplevel(1)zz
-
-
-# In[ ]:
-
-
-t4 = t3.reset_index(level='version')
-t4.reset_index(['ticker','qtrs', 'fye'])
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-t5 = t4.groupby(['version'])
-t5.get_group('us-gaap/2017')
-
-
-# In[ ]:
-
-
-t4['version'].unique()
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-# Create list containing different states in the data frame
-statement_list = []
-statment_types = aapl['stmt'].unique()
-for statement_type in statment_types:
-    statement = aapl[aapl['stmt'] == statement_type]
-    statement_list.append(statement)  
-
-
-# In[ ]:
-
-
-q10_list = []
-k10_list = []
-states = {}
-
-for statement in statement_list:
-    annual = statement[statement['form']=='10-K']
-    
-############ INCOME STATEMENT NEEDS 4 QTRS, BALANCE SHEET DOES NOT    
-    annual = annual[annual['qtrs']==4]
-    a_stmt_type = statement['stmt']
-
-    quarterly = statement[statement['form']=='10-Q']
-    q_stmt_type = statement['stmt']
-    
-    for version in quarterly['version'].unique():
-
-        v = quarterly[quarterly['version']==version]
-        q10 = v.pivot_table(index=['ticker', 'form', 'stmt', 'line', 'plabel'], columns=['ddate', 'fp'], values = 'value')
-        q10_list.append(q10)
         
-        v2 = annual[annual['version']==version]
-        k10 = v2.pivot_table(index=['ticker', 'form', 'stmt', 'line', 'plabel'], columns=['ddate', 'fp'], values = 'value')
-        k10_list.append(k10)
-        
-states['10-Q'] = q10_list
-states['10-K'] = k10_list
-
-
-# In[ ]:
-
-
-#statement_pivots = []
-#for i in statement_list:
-#    statement_pivots.append(i.pivot_table(index=['ticker', 'ddate', 'form', 'stmt', 'qtrs', 'version', 'fye', 'line', 'plabel'], columns=['fp'], values = 'value'))
-mv = aapl.pivot_table(index=['adsh', 'ticker', 'ddate', 'form', 'stmt', 'qtrs', 'version', 'fye', 'line', 'plabel'], columns=['fp'], values = 'value')
-
-
-# In[ ]:
-
-
-statement_pivots[0]
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-quarter_l = []
-for i in range(0,len(states['10-Q'])):
-    m = states['10-Q'][i]
-    display(m)
-    quarter_l.append(m)
+    g = combine_tables(quarterly_results)
+  
+    filings_by_ddate = seperate_by_dd_date(g)
+    cleaned = clean_dfs(filings_by_ddate)
     
-    
-
-statment_labels = []
-
-for i in annual_l:
-    
-    stt = i.index.get_level_values(2).unique()
-    statment_labels.append(list(stt))
-
-statement_labels = [''.join(x) for x in statment_labels]
-
-
-# In[ ]:
-
-
-mamba = dict(zip(statement_labels,quarter_l))
-
-
-# In[ ]:
-
-
-########## FOR ANNUAL STATEMENET
-annual_l = []
-for i in range(0,len(states['10-K'])):
-    m = states['10-K'][i]
-    display(m)
-    annual_l.append(m)
+    v_2017 = []
+    v_other = []
+    for i in cleaned:
+        lvls = i.index.get_level_values(0).unique().to_list()
+        if 'us-gaap/2017' in lvls:
+            tmp = i.xs('us-gaap/2017', level='version')
+            v_2017.append(tmp)
+        else:
+            v_other.append(i)
+    for i in v_2017:
+        tmp = reduce(lambda x,y: pd.merge(x, y, on='tag'), v_2017)
+        results.append(tmp)
+    for i in v_other:
+        tmp = reduce(lambda x,y: pd.merge(x, y, on='tag'), v_other)
+        results.append(tmp)
 
 
 # In[ ]:
 
 
-year_labels2 = []
-statment_labels = []
-annual_statments_clean = []
-for i in annual_l:
-    
-    stt = i.index.get_level_values(2).unique()
-    statment_labels.append(list(stt))
-    
-statement_labels = [''.join(x) for x in statment_labels]
+for i in results:
+    display(i)
 
 
 # In[ ]:
 
 
-mamba2 = dict(zip(statement_labels,annual_l))
-mamba2['IS']
-
-
-# In[ ]:
-
-
-mk = mamba2['IS']
-mk
-
-
-# In[ ]:
-
-
-mq = mamba['IS']
-mq
-
-
-# In[ ]:
-
-
-r = pd.merge(left = mk, right = mq, on='plabel')
-
-
-# In[ ]:
-
-
-v = r.reindex(sorted(r.columns, reverse=True), axis=1)
-v
-
-
-# In[ ]:
-
-
-v[v.columns[::-1]]
+########################################################################
 
 
 # In[ ]:
@@ -629,9 +327,50 @@ v[v.columns[::-1]]
 # In[ ]:
 
 
-##### NEED TO FIGURE THIS OUT.... maybe due to the common numbers like below
-#fy_convert = pd.to_numeric(aapl['fy'], downcast='integer')
 
-#### Converts year labels to int but will only keep one of each year
-#[int(i) for i in year_labels]
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+###
+#def create_new_index
+
+lines_2017 = quarterly_results[4].index.get_level_values('line').to_list()[:-1] 
+tags_2017 = quarterly_results[4].index.get_level_values('tag').to_list()[:-1]
+tup_2017 = tuple(zip(lines_2017,tags_2017))
+
+new_results = []
+for i in quarterly_results[:5]:
+    display(i.reset_index('filed'))
+    #i = i.unstack(1)
+    if i.index.values[0][0] == 'us-gaap/2018':
+        i.reset_index('version',drop=True, inplace=True)
+        i.index = pd.MultiIndex.from_tuples(tup_2017, names=['line', 'tag'])
+        new_results.append(i)
+    else:
+        i.drop(index='CommonStockDividendsPerShareDeclared', level = 1, inplace=True)
+        i.reset_index('version',drop=True, inplace=True)
+        new_results.append(i)
+
+#pd.concat(quarterly_results, axis=1, sort=False)
+g = reduce(lambda x, y: pd.merge(x, y, on=['tag', 'filed'], how='outer'), new_results)
 
